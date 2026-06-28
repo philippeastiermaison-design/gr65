@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>GR65 — Services Pèlerins</title>
+<style>
+:root {
+  --bg: #0f0f0f;
+  --bg2: #1a1a1a;
+  --bg3: #252525;
+  --border: #333;
+  --text: #e8e8e8;
+  --muted: #888;
+  --dodo: #16a34a;
+  --eau: #0284c7;
+  --manger: #ea580c;
+  --douche: #7c3aed;
+  --linge: #059669;
+  --elec: #d97706;
+  --laverie: #db2777;
+  --alerte: #dc2626;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+  font-size: 15px;
+  padding-bottom: calc(20px + env(safe-area-inset-bottom));
+}
+/* Header */
+#header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 16px;
+  padding-top: calc(12px + env(safe-area-inset-top));
+}
+h1 {
+  font-size: 18px;
+  font-weight: 700;
+  color: #f0f0f0;
+  margin-bottom: 2px;
+}
+.subtitle {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+#search {
+  width: 100%;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  font-size: 15px;
+  padding: 8px 12px;
+  outline: none;
+  margin-bottom: 10px;
+  -webkit-appearance: none;
+}
+#search::placeholder { color: var(--muted); }
+#search:focus { border-color: #555; }
+/* Filters */
+.filters {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding-bottom: 2px;
+}
+.filters::-webkit-scrollbar { display: none; }
+.filter-btn {
+  flex-shrink: 0;
+  padding: 5px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--bg3);
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.filter-btn.active { color: #fff; border-color: transparent; }
+.filter-btn[data-f="all"].active { background: #444; }
+.filter-btn[data-f="dodo"].active { background: var(--dodo); }
+.filter-btn[data-f="eau"].active { background: var(--eau); }
+.filter-btn[data-f="manger"].active { background: var(--manger); }
+.filter-btn[data-f="douche"].active { background: var(--douche); }
+.filter-btn[data-f="linge"].active { background: var(--linge); }
+.filter-btn[data-f="elec"].active { background: var(--elec); }
+.filter-btn[data-f="laverie"].active { background: var(--laverie); }
+/* Stats bar */
+#stats {
+  padding: 6px 16px;
+  font-size: 12px;
+  color: var(--muted);
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+}
+/* Alerte critique */
+.alerte-critique {
+  margin: 12px 16px;
+  padding: 12px 14px;
+  background: rgba(220,38,38,0.12);
+  border: 1px solid rgba(220,38,38,0.4);
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.alerte-critique strong { color: var(--alerte); display: block; margin-bottom: 4px; font-size: 14px; }
+/* Stage headers */
+.stage-header {
+  position: sticky;
+  top: 0;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  border-top: 1px solid var(--border);
+  padding: 8px 16px;
+  margin-top: 8px;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  z-index: 50;
+}
+.stage-name {
+  font-weight: 700;
+  font-size: 15px;
+  color: #f0f0f0;
+}
+.stage-km {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 500;
+}
+.stage-header .alerte-badge {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--alerte);
+  font-weight: 700;
+  background: rgba(220,38,38,0.15);
+  padding: 2px 7px;
+  border-radius: 10px;
+}
+/* Items */
+.item {
+  padding: 10px 16px;
+  border-bottom: 1px solid #1e1e1e;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.item:active { background: var(--bg3); }
+.item-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.item-name {
+  font-weight: 600;
+  font-size: 14px;
+  color: #f0f0f0;
+  flex: 1;
+  min-width: 0;
+}
+.item-note {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+.item-note .prix { color: #a3e635; font-weight: 600; }
+.item-note .star { color: #f59e0b; }
+.item-note .alerte-txt { color: var(--alerte); font-weight: 600; }
+.item-phone {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #38bdf8;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  margin-top: 1px;
+}
+.item-phone::before { content: "📞 "; }
+/* Tags */
+.tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.tag {
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.tag-dodo { background: rgba(22,163,74,0.2); color: #4ade80; }
+.tag-eau { background: rgba(2,132,199,0.2); color: #38bdf8; }
+.tag-manger { background: rgba(234,88,12,0.2); color: #fb923c; }
+.tag-douche { background: rgba(124,58,237,0.2); color: #c084fc; }
+.tag-linge { background: rgba(5,150,105,0.2); color: #34d399; }
+.tag-elec { background: rgba(217,119,6,0.2); color: #fbbf24; }
+.tag-laverie { background: rgba(219,39,119,0.2); color: #f472b6; }
+/* Section alerte AUBRAC */
+.aubrac-warn {
+  margin: 0 16px 8px;
+  padding: 10px 14px;
+  background: rgba(220,38,38,0.1);
+  border-left: 3px solid var(--alerte);
+  border-radius: 0 8px 8px 0;
+  font-size: 12px;
+  color: #fca5a5;
+  line-height: 1.5;
+}
+/* Hidden */
+.hidden { display: none !important; }
+/* Empty state */
+#empty {
+  padding: 40px 16px;
+  text-align: center;
+  color: var(--muted);
+  display: none;
+}
+/* Footer */
+footer {
+  padding: 20px 16px;
+  color: var(--muted);
+  font-size: 11px;
+  text-align: center;
+  line-height: 1.6;
+}
+</style>
+</head>
+<body>
+
+<div id="header">
+  <h1>🎒 GR65 — Services Pèlerins</h1>
+  <div class="subtitle">Le Puy-en-Velay → Saint-Jean-Pied-de-Port · ~750 km · En tente · Mise à jour 2026</div>
+  <input type="search" id="search" placeholder="🔍 Chercher village, gîte, service…" autocorrect="off" autocapitalize="off">
+  <div class="filters">
+    <button class="filter-btn active" data-f="all">Tout</button>
+    <button class="filter-btn" data-f="dodo">🛏 Dodo</button>
+    <button class="filter-btn" data-f="eau">💧 Eau</button>
+    <button class="filter-btn" data-f="manger">🍽 Manger</button>
+    <button class="filter-btn" data-f="douche">🚿 Douche</button>
+    <button class="filter-btn" data-f="linge">👕 Linge</button>
+    <button class="filter-btn" data-f="laverie">🏪 Laverie</button>
+    <button class="filter-btn" data-f="elec">🔌 Élec</button>
+  </div>
+</div>
+
+<div id="stats">Chargement…</div>
+
+<div class="alerte-critique">
+  <strong>⚠️ SECTION CRITIQUE — PLATEAU DE L'AUBRAC (km 95–121)</strong>
+  Aucun point d'eau fiable sur ~26 km entre La Chaze-de-Peyre et Nasbinals. Emporter minimum <strong>2 litres</strong>. Chaleur + vent = déshydratation rapide. Remplir systématiquement à chaque fontaine.
+</div>
+
+<div id="list-container"></div>
+<div id="empty">Aucun résultat 🤷</div>
+
+<footer>
+  Données compilées 2025–2026 • Vérifier disponibilité avant étape<br>
+  Bivouac sauvage toléré sur GR65 avec respect des propriétaires<br>
+  Buen Camino 🌟
+</footer>
+
+<script>
+const DATA = [
+
+/* ===== LE PUY-EN-VELAY ===== */
+{stage:"Le Puy-en-Velay", km:0, name:"Camping Municipal de Bouthezard", tags:["dodo","douche","linge","elec"], phone:"04 71 09 55 09", note:"Rive droite Borne. Tentes acceptées. Ouv. mai–sept."},
+{stage:"Le Puy-en-Velay", km:0, name:"Gîte Les Capucins", tags:["dodo","douche","linge","elec"], phone:"04 71 04 28 74", note:"Centre-ville, proche cathédrale"},
+{stage:"Le Puy-en-Velay", km:0, name:"Centre Pierre Cardinal (AJ)", tags:["dodo","douche","linge","elec"], phone:"04 71 05 52 40", note:"Auberge de jeunesse officielle"},
+{stage:"Le Puy-en-Velay", km:0, name:"Gîte d'étape associatif La Caborne", tags:["dodo","douche"], phone:"04 71 02 36 09", note:"Prix pèlerin, réserver"},
+{stage:"Le Puy-en-Velay", km:0, name:"Fontaine Place du Plot", tags:["eau"], note:"Centre-ville, eau potable"},
+{stage:"Le Puy-en-Velay", km:0, name:"Fontaine Cathédrale Notre-Dame", tags:["eau"], note:"Eau bénite + potable"},
+{stage:"Le Puy-en-Velay", km:0, name:"Laverie Automatique — Breuil", tags:["laverie"], note:"Rue Pannessac, ouv. 7h–21h"},
+{stage:"Le Puy-en-Velay", km:0, name:"Intermarché / Casino Centre", tags:["manger"], note:"Supermarchés en centre-ville"},
+{stage:"Le Puy-en-Velay", km:0, name:"Boulangeries + épiceries", tags:["manger"], note:"Nombreuses en centre-ville, rue Pannessac"},
+
+/* ===== SAINT-CHRISTOPHE-SUR-DOLAISON ===== */
+{stage:"Saint-Christophe-sur-Dolaison", km:9, name:"Gîte d'étape communal", tags:["dodo","douche","elec"], phone:"04 71 01 16 93", note:"Simple, propre, pèlerins uniquement"},
+{stage:"Saint-Christophe-sur-Dolaison", km:9, name:"Fontaine du village", tags:["eau"], note:"Place de l'église"},
+{stage:"Saint-Christophe-sur-Dolaison", km:9, name:"Épicerie / Dépôt pain", tags:["manger"], note:"Horaires limités, vérifier"},
+
+/* ===== MONTBONNET ===== */
+{stage:"Montbonnet", km:16, name:"Gîte La Grange de la Margeride", tags:["dodo","douche","elec"], phone:"04 71 57 27 77", note:"Accueil chaleureux, repas possible"},
+{stage:"Montbonnet", km:16, name:"Fontaine du hameau", tags:["eau"], note:"Eau potable"},
+
+/* ===== SAINT-PRIVAT-D'ALLIER ===== */
+{stage:"Saint-Privat-d'Allier", km:23, name:"Gîte Communal", tags:["dodo","douche","elec"], phone:"04 71 57 24 56", note:"Mairie gère les réservations"},
+{stage:"Saint-Privat-d'Allier", km:23, name:"Gîte L'As de Coeur (donativo)", tags:["dodo","douche"], phone:"04 71 57 20 48", note:"⭐ Participation libre, spirit pèlerin"},
+{stage:"Saint-Privat-d'Allier", km:23, name:"Bar-Restaurant du village", tags:["manger"], note:"Ouvert midi en saison"},
+{stage:"Saint-Privat-d'Allier", km:23, name:"Fontaine place de l'église", tags:["eau"], note:"Eau potable"},
+
+/* ===== ROCHEGUDE ===== */
+{stage:"Rochegude", km:27, name:"Gîte d'étape Rochegude", tags:["dodo","douche"], phone:"04 71 57 21 10", note:"Petite structure, ambiance familiale"},
+{stage:"Rochegude", km:27, name:"Fontaine hameau", tags:["eau"], note:"Eau potable"},
+
+/* ===== MONISTROL-D'ALLIER ===== */
+{stage:"Monistrol-d'Allier", km:31, name:"Auberge des Gorges de l'Allier", tags:["dodo","douche","manger"], phone:"04 71 57 24 14", note:"⚠️ Remontée 400m après — économiser énergie"},
+{stage:"Monistrol-d'Allier", km:31, name:"Gîte La Salamandre", tags:["dodo","douche","elec"], phone:"04 71 57 20 36", note:"Vue gorges, belle terrasse"},
+{stage:"Monistrol-d'Allier", km:31, name:"Bar / Épicerie du bourg", tags:["manger"], note:"Ravitaillement possible"},
+{stage:"Monistrol-d'Allier", km:31, name:"Fontaine place du village", tags:["eau"], note:"Eau potable"},
+
+/* ===== ESCLUZELS ===== */
+{stage:"Escluzels", km:36, name:"Fontaine du hameau", tags:["eau"], note:"Eau potable, petit hameau"},
+
+/* ===== SAUGUES ===== */
+{stage:"Saugues", km:42, name:"Camping Municipal de Saugues", tags:["dodo","douche","elec"], phone:"04 71 77 80 15", note:"Terrain plat, ouv. juin–sept."},
+{stage:"Saugues", km:42, name:"Gîte Communal Saint-Bénilde", tags:["dodo","douche","elec"], phone:"04 71 77 63 74", note:"Prix pèlerin, bonne capacité"},
+{stage:"Saugues", km:42, name:"Gîte La Tour des Anglais", tags:["dodo","douche"], phone:"04 71 77 83 44", note:"Ambiance médiévale sympa"},
+{stage:"Saugues", km:42, name:"Boulangerie Saugues", tags:["manger"], note:"Ouverte tôt, sandwichs"},
+{stage:"Saugues", km:42, name:"Épicerie / Petit Casino", tags:["manger"], note:"Ravitaillement complet"},
+{stage:"Saugues", km:42, name:"Restaurant Le Méjane", tags:["manger"], note:"Cuisine locale, menu pèlerin"},
+{stage:"Saugues", km:42, name:"Fontaine Saugues", tags:["eau"], note:"Plusieurs fontaines en ville"},
+
+/* ===== LE FALZET ===== */
+{stage:"Le Falzet", km:54, name:"Gîte La Margeride", tags:["dodo","douche","elec"], phone:"04 71 77 86 38", note:"Hameau isolé, réserver impérativement"},
+{stage:"Le Falzet", km:54, name:"Fontaine du hameau", tags:["eau"], note:"Eau potable"},
+
+/* ===== LA CLAUZE ===== */
+{stage:"La Clauze", km:60, name:"Gîte de La Clauze", tags:["dodo","douche"], phone:"04 71 77 80 44", note:"Petit gîte rural, calme"},
+{stage:"La Clauze", km:60, name:"Fontaine hameau", tags:["eau"], note:"Eau potable"},
+
+/* ===== CHANALEILLES ===== */
+{stage:"Chanaleilles", km:66, name:"Gîte de Chanaleilles / Domaine du Sauvage", tags:["dodo","douche","elec","manger"], phone:"04 71 74 40 77", note:"⭐ Ancienne commanderie hospitalière, repas remarquables"},
+{stage:"Chanaleilles", km:66, name:"Fontaine village", tags:["eau"], note:"Eau potable"},
+
+/* ===== SAINT-ALBAN-SUR-LIMAGNOLE ===== */
+{stage:"Saint-Alban-sur-Limagnole", km:72, name:"Camping de Saint-Alban", tags:["dodo","douche","elec"], phone:"04 66 31 50 33", note:"Municipal, bon accueil pèlerins"},
+{stage:"Saint-Alban-sur-Limagnole", km:72, name:"Gîte La Grange de la Margeside", tags:["dodo","douche","linge","elec"], phone:"04 66 31 56 00", note:"Linge 3€, repas disponible"},
+{stage:"Saint-Alban-sur-Limagnole", km:72, name:"Gîte Le Moulin d'Olt", tags:["dodo","douche","elec"], phone:"04 66 31 53 98", note:"Bord de rivière, agréable"},
+{stage:"Saint-Alban-sur-Limagnole", km:72, name:"Supermarché Spar / Vival", tags:["manger"], note:"Courses complètes"},
+{stage:"Saint-Alban-sur-Limagnole", km:72, name:"Boulangerie + restaurants", tags:["manger"], note:"Village-étape bien équipé"},
+{stage:"Saint-Alban-sur-Limagnole", km:72, name:"Fontaines du bourg", tags:["eau"], note:"Plusieurs points, eau potable"},
+
+/* ===== LES ESTRETS ===== */
+{stage:"Les Estrets", km:85, name:"Gîte-Bar-Restaurant Les Estrets", tags:["dodo","douche","manger","elec"], phone:"04 66 42 97 22", note:"Point de passage, dîner inclus souvent"},
+{stage:"Les Estrets", km:85, name:"Fontaine hameau", tags:["eau"], note:"Eau potable"},
+
+/* ===== AUMONT-AUBRAC ===== */
+{stage:"Aumont-Aubrac", km:95, name:"Camping La Rouquette", tags:["dodo","douche","elec"], phone:"04 66 42 91 97", note:"Bien situé, accueil pèlerins"},
+{stage:"Aumont-Aubrac", km:95, name:"Gîte Maison des Pèlerins", tags:["dodo","douche","elec"], phone:"04 66 42 93 55", note:"Prix associatif, ambiance communautaire"},
+{stage:"Aumont-Aubrac", km:95, name:"Gîte Chez Régine", tags:["dodo","douche","manger"], phone:"04 66 42 91 90", note:"Cuisine aubracaise authentique"},
+{stage:"Aumont-Aubrac", km:95, name:"Supermarché 8 à Huit", tags:["manger"], note:"⭐ DERNIER GRAND RAVITAILLEMENT avant Aubrac — EMPORTER NOURRITURE"},
+{stage:"Aumont-Aubrac", km:95, name:"Boulangerie Aumont", tags:["manger"], note:"Ouverte tôt, sandwichs à emporter"},
+{stage:"Aumont-Aubrac", km:95, name:"Restaurant Chez Marie", tags:["manger"], note:"Aligot + saucisse, menu pèlerin"},
+{stage:"Aumont-Aubrac", km:95, name:"Fontaines Aumont-Aubrac", tags:["eau"], note:"⭐ REMPLIR ICI — Section Aubrac critique à venir"},
+
+/* ===== LA CHAZE-DE-PEYRE (⚠️ AUBRAC) ===== */
+{stage:"La Chaze-de-Peyre", km:100, name:"Gîte de La Chaze-de-Peyre", tags:["dodo","douche","elec"], phone:"04 66 32 55 94", note:"⚠️ Dernier gîte avant désert de l'Aubrac"},
+{stage:"La Chaze-de-Peyre", km:100, name:"Fontaine du village ⚠️", tags:["eau"], note:"⭐ DERNIER POINT D'EAU FIABLE — 21 km jusqu'à Nasbinals. Remplir AU MAXIMUM."},
+
+/* ===== LES QUATRE CHEMINS (⚠️ AUBRAC) ===== */
+{stage:"Les Quatre Chemins", km:107, name:"Gîte des 4 Chemins", tags:["dodo","douche","manger","elec"], phone:"04 66 32 59 86", note:"⚠️ Seul refuge sur le plateau. Réserver. Eau disponible ici."},
+{stage:"Les Quatre Chemins", km:107, name:"Eau du gîte des 4 Chemins", tags:["eau"], note:"⚠️ Point d'eau intermédiaire — dépend ouverture gîte"},
+
+/* ===== PRINSUÉJOLS ===== */
+{stage:"Prinsuéjols", km:112, name:"Fontaine de Prinsuéjols", tags:["eau"], note:"⚠️ Vérifier débit en été, peut être à sec"},
+{stage:"Prinsuéjols", km:112, name:"Gîte Le Sabot de Vénus", tags:["dodo","douche"], phone:"04 66 32 52 33", note:"Oasis sur le plateau"},
+
+/* ===== NASBINALS ===== */
+{stage:"Nasbinals", km:121, name:"Camping de Nasbinals", tags:["dodo","douche","elec"], phone:"04 66 32 51 67", note:"6,50€/pers tente. Accueil excellent."},
+{stage:"Nasbinals", km:121, name:"Gîte NADA — Chez Régine Fieu", tags:["dodo","douche","linge","elec"], phone:"04 66 32 50 06", note:"⭐ Légendaire sur le GR65, repas copieux, atmosphère"},
+{stage:"Nasbinals", km:121, name:"Gîte Communal de Nasbinals", tags:["dodo","douche","elec"], phone:"04 66 32 56 90", note:"Grande capacité, prix raisonnable"},
+{stage:"Nasbinals", km:121, name:"Épicerie / Alimentation Nasbinals", tags:["manger"], note:"Ravitaillement après traversée Aubrac"},
+{stage:"Nasbinals", km:121, name:"Boulangerie Nasbinals", tags:["manger"], note:"Ouverte saison pèlerinage"},
+{stage:"Nasbinals", km:121, name:"Restaurant L'Auvergnat", tags:["manger"], note:"Tripoux + aligot, valeur sûre"},
+{stage:"Nasbinals", km:121, name:"Fontaines Nasbinals", tags:["eau"], note:"Eau potable, remplir gourdes"},
+
+/* ===== AUBRAC ===== */
+{stage:"Aubrac", km:127, name:"Auberge de l'Aubrac", tags:["dodo","douche","manger","elec"], phone:"05 65 44 28 42", note:"Historique, prix élevés mais confort. Réserver."},
+{stage:"Aubrac", km:127, name:"Domaine de Bourines (camping)", tags:["dodo","elec"], phone:"05 65 48 78 84", note:"Tentes, cadre sublime"},
+{stage:"Aubrac", km:127, name:"Fontaine d'Aubrac", tags:["eau"], note:"Eau potable au village"},
+{stage:"Aubrac", km:127, name:"Épicerie/Bar d'Aubrac", tags:["manger"], note:"Produits locaux, ouv. saison"},
+
+/* ===== SAINT-CHÉLY-D'AUBRAC ===== */
+{stage:"Saint-Chély-d'Aubrac", km:133, name:"Gîte d'étape communal", tags:["dodo","douche","elec"], phone:"05 65 48 26 35", note:"Bien équipé, cuisine commune"},
+{stage:"Saint-Chély-d'Aubrac", km:133, name:"Fontaine Saint-Chély", tags:["eau"], note:"Eau potable, belle fontaine ancienne"},
+{stage:"Saint-Chély-d'Aubrac", km:133, name:"Bar-restaurant du bourg", tags:["manger"], note:"Menu pèlerin midi"},
+
+/* ===== SAINT-CÔME-D'OLT ===== */
+{stage:"Saint-Côme-d'Olt", km:142, name:"Camping de Saint-Côme-d'Olt", tags:["dodo","douche","elec"], phone:"05 65 44 10 02", note:"Bord Lot, ombragé, belle étape"},
+{stage:"Saint-Côme-d'Olt", km:142, name:"Gîte Communal Saint-Côme", tags:["dodo","douche","elec"], phone:"05 65 48 29 98", note:"Village médiéval classé"},
+{stage:"Saint-Côme-d'Olt", km:142, name:"Boulangerie / Café Saint-Côme", tags:["manger"], note:"Dans le bourg historique"},
+{stage:"Saint-Côme-d'Olt", km:142, name:"Fontaine et lavoir", tags:["eau"], note:"Eau potable au centre"},
+
+/* ===== ESPALION ===== */
+{stage:"Espalion", km:153, name:"Camping Roc de l'Arche", tags:["dodo","douche","elec"], phone:"05 65 44 04 23", note:"Municipal, bord Lot, bonne infrastructure"},
+{stage:"Espalion", km:153, name:"Gîte d'étape Les Vignes", tags:["dodo","douche","linge","elec"], phone:"05 65 44 16 56", note:"Linge disponible, cuisine"},
+{stage:"Espalion", km:153, name:"Laverie automatique Espalion", tags:["laverie"], note:"Centre-ville, ouv. 7h–21h"},
+{stage:"Espalion", km:153, name:"Intermarché Espalion", tags:["manger"], note:"Grande surface, courses complètes"},
+{stage:"Espalion", km:153, name:"Boulangeries + restaurants", tags:["manger"], note:"Bonne offre en ville"},
+{stage:"Espalion", km:153, name:"Fontaines Espalion", tags:["eau"], note:"Eau potable, plusieurs points"},
+
+/* ===== ESTAING ===== */
+{stage:"Estaing", km:166, name:"Camping Municipal d'Estaing", tags:["dodo","douche","elec"], phone:"05 65 44 01 43", note:"Bord Lot, cadre exceptionnel, village classé"},
+{stage:"Estaing", km:166, name:"Gîte du Château d'Estaing", tags:["dodo","douche","elec"], phone:"05 65 44 70 02", note:"Dans l'enceinte du château, expérience unique"},
+{stage:"Estaing", km:166, name:"Bar-Restaurant du Lot", tags:["manger"], note:"Vue pont médiéval"},
+{stage:"Estaing", km:166, name:"Boulangerie d'Estaing", tags:["manger"], note:"Ouv. saison"},
+{stage:"Estaing", km:166, name:"Fontaine Estaing", tags:["eau"], note:"Eau potable au village"},
+
+/* ===== GOLINHAC ===== */
+{stage:"Golinhac", km:184, name:"Gîte-Hôtel Pôle Touristique Bellevue", tags:["dodo","douche","linge","elec","manger"], phone:"06 89 55 46 32", note:"9€/pers tente, lave-linge 3,50€, restaurant"},
+{stage:"Golinhac", km:184, name:"Fontaine Golinhac", tags:["eau"], note:"Eau potable, place du village"},
+{stage:"Golinhac", km:184, name:"Épicerie dépôt pain", tags:["manger"], note:"Petite épicerie, horaires limités"},
+
+/* ===== ESPEYRAC ===== */
+{stage:"Espeyrac", km:189, name:"Gîte d'étape communal Espeyrac", tags:["dodo","douche","elec"], phone:"05 65 44 93 52", note:"Accueil pèlerins, cuisine commune"},
+{stage:"Espeyrac", km:189, name:"Fontaine Espeyrac", tags:["eau"], note:"Eau potable"},
+
+/* ===== SÉNERGUES ===== */
+{stage:"Sénergues", km:193, name:"Gîte de Sénergues", tags:["dodo","douche","elec"], phone:"05 65 72 82 20", note:"Avant-dernière étape avant Conques"},
+{stage:"Sénergues", km:193, name:"Fontaine Sénergues", tags:["eau"], note:"Eau potable"},
+
+/* ===== CONQUES ===== */
+{stage:"Conques", km:199, name:"Camping de Conques", tags:["dodo","douche","elec"], phone:"05 65 72 82 00", note:"En contrebas du village, navette possible"},
+{stage:"Conques", km:199, name:"Gîte Pieds dans l'Eau", tags:["dodo","douche","elec"], phone:"05 65 69 84 11", note:"Bord Dourdou, calme, bonne ambiance"},
+{stage:"Conques", km:199, name:"Abbaye de Conques (douche pèlerins)", tags:["douche"], phone:"05 65 69 89 00", note:"Accueil monastique, douches uniquement, tenue correcte"},
+{stage:"Conques", km:199, name:"Restaurants + Boulangerie Conques", tags:["manger"], note:"Village touristique, bien équipé mais cher"},
+{stage:"Conques", km:199, name:"Fontaine Conques", tags:["eau"], note:"Eau potable dans le village"},
+
+/* ===== NOAILHAC ===== */
+{stage:"Noailhac", km:208, name:"Gîte de Noailhac", tags:["dodo","douche","elec"], phone:"05 65 72 84 31", note:"Petite structure rurale, calme"},
+{stage:"Noailhac", km:208, name:"Fontaine Noailhac", tags:["eau"], note:"Eau potable"},
+
+/* ===== SAINT-CYPRIEN-SUR-DOURDOU ===== */
+{stage:"Saint-Cyprien-sur-Dourdou", km:213, name:"Gîte Saint-Cyprien", tags:["dodo","douche","elec"], phone:"05 65 72 87 00", note:"Petite étape, calme"},
+{stage:"Saint-Cyprien-sur-Dourdou", km:213, name:"Fontaine", tags:["eau"], note:"Eau potable"},
+
+/* ===== DECAZEVILLE ===== */
+{stage:"Decazeville", km:224, name:"Gîte Les Volets Bleus ⭐", tags:["dodo","douche","linge","elec","manger"], phone:"06 49 89 97 16", note:"⭐ 9€/pers tente, lave-linge 5€, dîner 18€, NAVETTE GARE GRATUITE — légendaire GR65"},
+{stage:"Decazeville", km:224, name:"Leclerc Decazeville", tags:["manger"], note:"Grande surface, courses complètes"},
+{stage:"Decazeville", km:224, name:"Boulangeries Decazeville", tags:["manger"], note:"Plusieurs en centre-ville"},
+{stage:"Decazeville", km:224, name:"Fontaines Decazeville", tags:["eau"], note:"Eau potable"},
+
+/* ===== LIVINHAC-LE-HAUT ===== */
+{stage:"Livinhac-le-Haut", km:236, name:"Gîte d'étape de Livinhac", tags:["dodo","douche","elec"], phone:"05 65 43 02 21", note:"Village-étape sur Lot, vue agréable"},
+{stage:"Livinhac-le-Haut", km:236, name:"Fontaine Livinhac", tags:["eau"], note:"Eau potable au village"},
+{stage:"Livinhac-le-Haut", km:236, name:"Bar-épicerie", tags:["manger"], note:"Ravitaillement simple"},
+
+/* ===== MONTREDON ===== */
+{stage:"Montredon", km:241, name:"Gîte de Montredon", tags:["dodo","douche"], phone:"05 65 43 17 66", note:"Hameau, accueil familial"},
+{stage:"Montredon", km:241, name:"Fontaine hameau", tags:["eau"], note:"Eau potable"},
+
+/* ===== FIGEAC ===== */
+{stage:"Figeac", km:254, name:"Camping Rives du Célé", tags:["dodo","douche","elec"], phone:"05 65 34 59 00", note:"4 étoiles, bord Célé, bonne infrastructure"},
+{stage:"Figeac", km:254, name:"Gîte d'étape de Figeac", tags:["dodo","douche","linge","elec"], phone:"05 65 34 05 63", note:"Centre-ville, pratique"},
+{stage:"Figeac", km:254, name:"Laverie Automatique Figeac", tags:["laverie"], note:"Centre-ville, plusieurs machines"},
+{stage:"Figeac", km:254, name:"Intermarché / Leclerc Figeac", tags:["manger"], note:"Grands supermarchés en périphérie"},
+{stage:"Figeac", km:254, name:"Marché + boulangeries Figeac", tags:["manger"], note:"Marché médiéval mercredi + samedi"},
+{stage:"Figeac", km:254, name:"Restaurants Figeac", tags:["manger"], note:"Bonne offre, centre historique animé"},
+{stage:"Figeac", km:254, name:"Fontaines Figeac", tags:["eau"], note:"Eau potable centre-ville"},
+
+/* ===== FAYCELLES ===== */
+{stage:"Faycelles", km:263, name:"Gîte de Faycelles", tags:["dodo","douche","elec"], phone:"05 65 34 60 25", note:"Vue vallée du Célé, tranquille"},
+{stage:"Faycelles", km:263, name:"Fontaine Faycelles", tags:["eau"], note:"Eau potable"},
+
+/* ===== BÉDUER ===== */
+{stage:"Béduer", km:270, name:"Gîte de Béduer", tags:["dodo","douche","elec"], phone:"05 65 40 05 85", note:"Village médiéval"},
+{stage:"Béduer", km:270, name:"Fontaine Béduer", tags:["eau"], note:"Eau potable"},
+
+/* ===== ESPAGNAC-SAINTE-EULALIE ===== */
+{stage:"Espagnac-Sainte-Eulalie", km:278, name:"Prieuré Val Paradis (gîte)", tags:["dodo","douche","elec"], phone:"05 65 40 09 14", note:"⭐ Prieuré cistercien, accueil exceptionnel, cadre médiéval"},
+{stage:"Espagnac-Sainte-Eulalie", km:278, name:"Fontaine Espagnac", tags:["eau"], note:"Eau potable"},
+
+/* ===== BRENGUES ===== */
+{stage:"Brengues", km:282, name:"Gîte de Brengues", tags:["dodo","douche","elec"], phone:"05 65 34 27 43", note:"Village suspendu au-dessus du Célé"},
+{stage:"Brengues", km:282, name:"Fontaine", tags:["eau"], note:"Eau potable"},
+
+/* ===== CAJARC ===== */
+{stage:"Cajarc", km:293, name:"Camping de Cajarc", tags:["dodo","douche","elec"], phone:"05 65 40 65 36", note:"Bord Lot, bien équipé, tentes OK"},
+{stage:"Cajarc", km:293, name:"Gîte d'étape de Cajarc", tags:["dodo","douche","elec"], phone:"05 65 40 62 14", note:"Centre-bourg, pratique"},
+{stage:"Cajarc", km:293, name:"Boulangerie + épicerie Cajarc", tags:["manger"], note:"Courses possibles, petite ville"},
+{stage:"Cajarc", km:293, name:"Restaurant Le Limouzi", tags:["manger"], note:"Menu pèlerin, cuisine du terroir"},
+{stage:"Cajarc", km:293, name:"Fontaine Cajarc", tags:["eau"], note:"Eau potable"},
+
+/* ===== GAILLAC ===== */
+{stage:"Gaillac-d'Aveyron", km:300, name:"Gîte de Gaillac", tags:["dodo","douche","elec"], phone:"05 65 29 53 65", note:"Hameau, calme total"},
+{stage:"Gaillac-d'Aveyron", km:300, name:"Fontaine", tags:["eau"], note:"Eau potable"},
+
+/* ===== VARAIRE ===== */
+{stage:"Varaire", km:308, name:"Gîte de Varaire", tags:["dodo","douche","elec"], phone:"05 65 31 51 05", note:"Bon accueil pèlerins"},
+{stage:"Varaire", km:308, name:"Café-Épicerie de Varaire", tags:["manger"], note:"Dépôt pain, ravitaillement simple"},
+{stage:"Varaire", km:308, name:"Fontaine Varaire", tags:["eau"], note:"Eau potable"},
+
+/* ===== BACH ===== */
+{stage:"Bach", km:320, name:"Gîte d'étape de Bach", tags:["dodo","douche","elec"], phone:"05 65 31 54 78", note:"Accueil familial, cuisine caussenarde"},
+{stage:"Bach", km:320, name:"Fontaine Bach", tags:["eau"], note:"Eau potable"},
+{stage:"Bach", km:320, name:"Boulangerie / Bar Bach", tags:["manger"], note:"Ouvert en saison"},
+
+/* ===== LIMOGNE-EN-QUERCY ===== */
+{stage:"Limogne-en-Quercy", km:330, name:"Gîte de Limogne", tags:["dodo","douche","elec"], phone:"05 65 31 51 08", note:"Village-étape du Quercy blanc"},
+{stage:"Limogne-en-Quercy", km:330, name:"Boulangerie + épicerie Limogne", tags:["manger"], note:"Ravitaillement avant Causse"},
+{stage:"Limogne-en-Quercy", km:330, name:"Fontaine Limogne", tags:["eau"], note:"Eau potable"},
+
+/* ===== MAS-DE-VERS ===== */
+{stage:"Mas-de-Vers", km:335, name:"Gîte de Mas-de-Vers", tags:["dodo","douche","elec"], phone:"05 65 22 63 12", note:"Hameau isolé sur le Causse, atmosphère"},
+{stage:"Mas-de-Vers", km:335, name:"Fontaine hameau", tags:["eau"], note:"Eau potable"},
+
+/* ===== SAINT-JEAN-DE-LA-CROIX / LE VIGAN ===== */
+{stage:"Le Vigan", km:343, name:"Gîte du Causse Blanc", tags:["dodo","douche","elec"], phone:"05 65 31 56 12", note:"Dernier hameau avant descente sur Cahors"},
+{stage:"Le Vigan", km:343, name:"Fontaine", tags:["eau"], note:"Eau potable"},
+
+/* ===== CAHORS ===== */
+{stage:"Cahors", km:354, name:"Camping Saint-Georges", tags:["dodo","douche","elec"], phone:"05 65 35 04 64", note:"Municipal, bord Lot, bon accueil pèlerins"},
+{stage:"Cahors", km:354, name:"Gîte d'étape Arcades", tags:["dodo","douche","linge","elec"], phone:"05 65 35 25 04", note:"Hyper centre, pratique"},
+{stage:"Cahors", km:354, name:"Laverie Automatique Cahors", tags:["laverie"], note:"Centre-ville, plusieurs laveries"},
+{stage:"Cahors", km:354, name:"Monoprix / Leclerc Cahors", tags:["manger"], note:"Supermarchés accessibles à pied"},
+{stage:"Cahors", km:354, name:"Marché Cahors (mercredi + samedi)", tags:["manger"], note:"Grand marché en plein air"},
+{stage:"Cahors", km:354, name:"Restaurants Cahors", tags:["manger"], note:"Cuisine du terroir, truffe, vins de Cahors"},
+{stage:"Cahors", km:354, name:"Fontaines Cahors", tags:["eau"], note:"Eau potable centre-ville"},
+{stage:"Cahors", km:354, name:"Office de Tourisme Cahors", tags:["eau","elec"], note:"Accueil pèlerins, tampon, infos"},
+
+/* ===== LUZECH ===== */
+{stage:"Luzech", km:363, name:"Camping Bégoux de Luzech", tags:["dodo","douche","elec"], phone:"05 65 20 15 45", note:"Presqu'île du Lot, décor remarquable"},
+{stage:"Luzech", km:363, name:"Bar-restaurant du village", tags:["manger"], note:"Vue sur le méandre du Lot"},
+{stage:"Luzech", km:363, name:"Fontaine Luzech", tags:["eau"], note:"Eau potable"},
+
+/* ===== CASTELFRANC ===== */
+{stage:"Castelfranc", km:370, name:"Gîte de Castelfranc", tags:["dodo","douche","elec"], phone:"05 65 36 50 02", note:"Beau village, accueil chaleureux"},
+{stage:"Castelfranc", km:370, name:"Fontaine", tags:["eau"], note:"Eau potable"},
+
+/* ===== MONTCUQ ===== */
+{stage:"Montcuq", km:384, name:"Camping de Montcuq", tags:["dodo","douche","elec"], phone:"05 65 22 90 56", note:"Village médiéval perché"},
+{stage:"Montcuq", km:384, name:"Gîte L'Étape de Montcuq", tags:["dodo","douche","elec"], phone:"05 65 22 94 49", note:"Centre bourg"},
+{stage:"Montcuq", km:384, name:"Boulangerie + épicerie Montcuq", tags:["manger"], note:"Ravitaillement complet"},
+{stage:"Montcuq", km:384, name:"Fontaine Montcuq", tags:["eau"], note:"Eau potable"},
+
+/* ===== LAUZERTE ===== */
+{stage:"Lauzerte", km:400, name:"Camping de Lauzerte", tags:["dodo","douche","elec"], phone:"05 63 94 61 60", note:"Vue panoramique exceptionnelle, village classé"},
+{stage:"Lauzerte", km:400, name:"Gîte communal Lauzerte", tags:["dodo","douche","elec"], phone:"05 63 94 61 94", note:"Dans le village médiéval, beau"},
+{stage:"Lauzerte", km:400, name:"Restaurant + Boulangerie Lauzerte", tags:["manger"], note:"Village touristique, bon choix"},
+{stage:"Lauzerte", km:400, name:"Fontaine Lauzerte", tags:["eau"], note:"Eau potable, plusieurs fontaines"},
+
+/* ===== DURFORT-LACAPELETTE ===== */
+{stage:"Durfort-Lacapelette", km:410, name:"Gîte de Durfort", tags:["dodo","douche","elec"], phone:"05 63 94 22 16", note:"Accueil familial"},
+{stage:"Durfort-Lacapelette", km:410, name:"Fontaine", tags:["eau"], note:"Eau potable"},
+
+/* ===== MOISSAC ===== */
+{stage:"Moissac", km:440, name:"Camping Île de Bidounet", tags:["dodo","douche","elec"], phone:"05 63 32 52 52", note:"Île dans le Tarn, magnifique, bien équipé"},
+{stage:"Moissac", km:440, name:"Gîte d'étape municipal Moissac", tags:["dodo","douche","elec"], phone:"05 63 32 28 23", note:"Proche abbatiale"},
+{stage:"Moissac", km:440, name:"Abbaye Saint-Pierre (accueil pèlerins)", tags:["douche"], phone:"05 63 04 01 85", note:"Douches pèlerins + tampon credencial"},
+{stage:"Moissac", km:440, name:"Laverie automatique Moissac", tags:["laverie"], note:"Centre-ville, ouv. 7h–21h"},
+{stage:"Moissac", km:440, name:"Intermarché / Lidl Moissac", tags:["manger"], note:"Supermarchés accessibles, courses complètes"},
+{stage:"Moissac", km:440, name:"Restaurants Moissac + marché chasselas", tags:["manger"], note:"Raisins de Moissac + cuisine gasconne"},
+{stage:"Moissac", km:440, name:"Fontaines Moissac", tags:["eau"], note:"Eau potable, centre-ville"},
+
+/* ===== ESPALAIS ===== */
+{stage:"Espalais", km:450, name:"Gîte Par'Chemin (donativo) ⭐", tags:["dodo","douche","elec"], phone:"05 63 39 87 48", note:"⭐ Participation libre, très chaleureux, légendaire"},
+{stage:"Espalais", km:450, name:"Fontaine Espalais", tags:["eau"], note:"Eau potable"},
+
+/* ===== AUVILLAR ===== */
+{stage:"Auvillar", km:458, name:"Gîte Communal d'Auvillar", tags:["dodo","douche","elec"], phone:"05 63 39 89 82", note:"Village classé plus beaux villages de France"},
+{stage:"Auvillar", km:458, name:"Café + Boulangerie Auvillar", tags:["manger"], note:"Belle halle ronde historique"},
+{stage:"Auvillar", km:458, name:"Fontaine Auvillar", tags:["eau"], note:"Eau potable"},
+
+/* ===== CASTET-ARROUY ===== */
+{stage:"Castet-Arrouy", km:465, name:"Gîte Le Lièvre et la Tortue", tags:["dodo","douche","manger","elec"], phone:"05 62 28 22 10", note:"Accueil pèlerins, repas gasconne"},
+{stage:"Castet-Arrouy", km:465, name:"Fontaine hameau", tags:["eau"], note:"Eau potable"},
+
+/* ===== MIRADOUX ===== */
+{stage:"Miradoux", km:472, name:"Gîte communal de Miradoux", tags:["dodo","douche","elec"], phone:"05 62 28 62 92", note:"Bastide médiévale"},
+{stage:"Miradoux", km:472, name:"Fontaine Miradoux", tags:["eau"], note:"Eau potable, place centrale"},
+{stage:"Miradoux", km:472, name:"Bar-épicerie Miradoux", tags:["manger"], note:"Dépannage possible"},
+
+/* ===== SAINT-ANTOINE ===== */
+{stage:"Saint-Antoine", km:478, name:"Gîte de Saint-Antoine", tags:["dodo","douche","elec"], phone:"05 62 28 71 54", note:"Petit bourg gers"},
+{stage:"Saint-Antoine", km:478, name:"Fontaine", tags:["eau"], note:"Eau potable"},
+
+/* ===== LECTOURE ===== */
+{stage:"Lectoure", km:497, name:"Camping Lac des 3 Vallées", tags:["dodo","douche","elec"], phone:"05 62 68 82 33", note:"Lac artificiel, baignade possible, bien équipé"},
+{stage:"Lectoure", km:497, name:"Gîte municipal Lectoure", tags:["dodo","douche","elec"], phone:"05 62 68 76 98", note:"Centre historique, vue remparts"},
+{stage:"Lectoure", km:497, name:"Supermarché Lectoure", tags:["manger"], note:"Courses complètes"},
+{stage:"Lectoure", km:497, name:"Restaurants + boulangeries Lectoure", tags:["manger"], note:"Sous-préfecture, bonne offre"},
+{stage:"Lectoure", km:497, name:"Fontaines Lectoure", tags:["eau"], note:"Eau potable, belles fontaines anciennes"},
+
+/* ===== LA ROMIEU ===== */
+{stage:"La Romieu", km:509, name:"Gîte des Chanoines de La Romieu", tags:["dodo","douche","elec"], phone:"05 62 28 10 37", note:"Collégiale classée UNESCO à côté"},
+{stage:"La Romieu", km:509, name:"Café-Bar La Romieu", tags:["manger"], note:"Bonne halte"},
+{stage:"La Romieu", km:509, name:"Fontaine La Romieu", tags:["eau"], note:"Eau potable"},
+
+/* ===== CONDOM ===== */
+{stage:"Condom", km:521, name:"Camping de Condom", tags:["dodo","douche","elec"], phone:"05 62 28 17 32", note:"Municipal, bord Baïse, ombragé"},
+{stage:"Condom", km:521, name:"Gîte Saint-Jacques de Condom", tags:["dodo","douche","linge","elec"], phone:"05 62 68 27 59", note:"Linge disponible, centre-ville"},
+{stage:"Condom", km:521, name:"Laverie Automatique Condom", tags:["laverie"], note:"Centre-ville"},
+{stage:"Condom", km:521, name:"Leclerc Condom", tags:["manger"], note:"Grand supermarché, courses complètes"},
+{stage:"Condom", km:521, name:"Restaurants Condom + marché", tags:["manger"], note:"Armagnac + canard, sous-préfecture animée"},
+{stage:"Condom", km:521, name:"Fontaines Condom", tags:["eau"], note:"Eau potable centre-ville"},
+
+/* ===== LARRESSINGLE ===== */
+{stage:"Larressingle", km:528, name:"Gîte de Larressingle", tags:["dodo","douche","elec"], phone:"05 62 28 10 28", note:"Plus petit village fortifié de France, exceptionnel"},
+{stage:"Larressingle", km:528, name:"Fontaine Larressingle", tags:["eau"], note:"Eau potable dans la cité fortifiée"},
+{stage:"Larressingle", km:528, name:"Restaurant du village", tags:["manger"], note:"Ouv. saison touristique"},
+
+/* ===== MONTRÉAL-DU-GERS ===== */
+{stage:"Montréal-du-Gers", km:538, name:"Gîte de Montréal-du-Gers", tags:["dodo","douche","elec"], phone:"05 62 29 43 49", note:"Bastide médiévale, vue dégagée"},
+{stage:"Montréal-du-Gers", km:538, name:"Boulangerie + Café Montréal-du-Gers", tags:["manger"], note:"Dépôt pain, café"},
+{stage:"Montréal-du-Gers", km:538, name:"Épicerie de Montréal", tags:["manger"], note:"Ravitaillement possible"},
+{stage:"Montréal-du-Gers", km:538, name:"Fontaine Montréal-du-Gers", tags:["eau"], note:"Eau potable, place de la halle"},
+
+/* ===== ÉAUZE ===== */
+{stage:"Éauze", km:545, name:"Camping d'Éauze", tags:["dodo","douche","elec"], phone:"05 62 09 85 24", note:"Municipal, ouvert saison pèlerinage"},
+{stage:"Éauze", km:545, name:"Gîte d'étape d'Éauze", tags:["dodo","douche","elec"], phone:"05 62 09 74 97", note:"Centre-bourg, capitale historique de la Gascogne"},
+{stage:"Éauze", km:545, name:"Supermarché Éauze", tags:["manger"], note:"Courses possibles"},
+{stage:"Éauze", km:545, name:"Boulangeries + restaurants Éauze", tags:["manger"], note:"Petite sous-préfecture animée"},
+{stage:"Éauze", km:545, name:"Fontaine Éauze", tags:["eau"], note:"Eau potable"},
+
+/* ===== NOGARO ===== */
+{stage:"Nogaro", km:557, name:"Camping de Nogaro", tags:["dodo","douche","elec"], phone:"05 62 09 01 57", note:"Municipal, accueil pèlerins"},
+{stage:"Nogaro", km:557, name:"Boulangerie + épicerie Nogaro", tags:["manger"], note:"Ravitaillement complet"},
+{stage:"Nogaro", km:557, name:"Fontaine Nogaro", tags:["eau"], note:"Eau potable"},
+
+/* ===== AIRE-SUR-L'ADOUR ===== */
+{stage:"Aire-sur-l'Adour", km:572, name:"Camping Les Ombrages de l'Adour", tags:["dodo","douche","elec"], phone:"05 58 71 60 70", note:"Bord Adour, ombragé, bien équipé"},
+{stage:"Aire-sur-l'Adour", km:572, name:"Gîte d'étape d'Aire", tags:["dodo","douche","linge","elec"], phone:"05 58 71 60 70", note:"Linge disponible"},
+{stage:"Aire-sur-l'Adour", km:572, name:"Laverie Automatique Aire", tags:["laverie"], note:"Centre-ville"},
+{stage:"Aire-sur-l'Adour", km:572, name:"Intermarché Aire-sur-l'Adour", tags:["manger"], note:"Grand supermarché, courses complètes"},
+{stage:"Aire-sur-l'Adour", km:572, name:"Restaurants + boulangeries Aire", tags:["manger"], note:"Sous-préfecture, bonne offre"},
+{stage:"Aire-sur-l'Adour", km:572, name:"Fontaines Aire", tags:["eau"], note:"Eau potable"},
+
+/* ===== MIRAMONT-SENSACQ ===== */
+{stage:"Miramont-Sensacq", km:586, name:"Gîte de Miramont-Sensacq", tags:["dodo","douche","elec"], phone:"05 58 44 43 22", note:"Village landais, accueil familial"},
+{stage:"Miramont-Sensacq", km:586, name:"Fontaine Miramont", tags:["eau"], note:"Eau potable"},
+
+/* ===== PIMBO ===== */
+{stage:"Pimbo", km:590, name:"Gîte de Pimbo", tags:["dodo","douche","elec"], phone:"05 58 44 40 02", note:"Plus petit des plus beaux villages, colline fortifiée"},
+{stage:"Pimbo", km:590, name:"Fontaine Pimbo", tags:["eau"], note:"Eau potable"},
+
+/* ===== ARZACQ-ARRAZIGUET ===== */
+{stage:"Arzacq-Arraziguet", km:597, name:"Camping d'Arzacq", tags:["dodo","douche","elec"], phone:"05 59 04 40 27", note:"Municipal, entrée Béarn"},
+{stage:"Arzacq-Arraziguet", km:597, name:"Gîte d'étape Arzacq", tags:["dodo","douche","elec"], phone:"05 59 04 48 52", note:"Centre-bourg"},
+{stage:"Arzacq-Arraziguet", km:597, name:"Épicerie + Café Arzacq", tags:["manger"], note:"Ravitaillement"},
+{stage:"Arzacq-Arraziguet", km:597, name:"Fontaine Arzacq", tags:["eau"], note:"Eau potable, place du village"},
+
+/* ===== LOUVIGNY ===== */
+{stage:"Louvigny", km:604, name:"Fontaine Louvigny", tags:["eau"], note:"Petit hameau, eau potable"},
+{stage:"Louvigny", km:604, name:"Gîte de Louvigny", tags:["dodo","douche"], phone:"05 59 04 43 55", note:"Ferme béarnaise"},
+
+/* ===== ARTHEZ-DE-BÉARN ===== */
+{stage:"Arthez-de-Béarn", km:609, name:"Gîte Communal d'Arthez", tags:["dodo","douche","elec"], phone:"05 59 67 40 71", note:"Village fortifié, panorama Pyrénées par beau temps"},
+{stage:"Arthez-de-Béarn", km:609, name:"Fontaine + épicerie Arthez", tags:["eau","manger"], note:"Eau potable + ravitaillement"},
+{stage:"Arthez-de-Béarn", km:609, name:"Bar-restaurant Arthez", tags:["manger"], note:"Ouv. en saison"},
+
+/* ===== MASLACQ ===== */
+{stage:"Maslacq", km:616, name:"Gîte de Maslacq", tags:["dodo","douche","elec"], phone:"05 59 67 50 28", note:"Village béarnais"},
+{stage:"Maslacq", km:616, name:"Fontaine Maslacq", tags:["eau"], note:"Eau potable"},
+
+/* ===== SAUVELADE ===== */
+{stage:"Sauvelade", km:622, name:"Abbaye de Sauvelade (gîte)", tags:["dodo","douche","elec"], phone:"05 59 67 68 42", note:"⭐ Abbaye cistercienne, accueil monastique, ambiance unique"},
+{stage:"Sauvelade", km:622, name:"Fontaine abbaye", tags:["eau"], note:"Eau potable dans le domaine"},
+
+/* ===== NAVARRENX ===== */
+{stage:"Navarrenx", km:635, name:"Camping d'Arrayou", tags:["dodo","douche","elec"], phone:"05 59 66 10 00", note:"Municipal, bord Gave, ombragé"},
+{stage:"Navarrenx", km:635, name:"Gîte L'Alchimiste (donativo) ⭐", tags:["dodo","douche","elec"], phone:"05 59 66 16 57", note:"⭐ Participation libre, esprit pèlerin authentique, légendaire"},
+{stage:"Navarrenx", km:635, name:"Gîte communal de Navarrenx", tags:["dodo","douche","elec"], phone:"05 59 66 03 50", note:"Dans les remparts, beau"},
+{stage:"Navarrenx", km:635, name:"Restaurants + épiceries Navarrenx", tags:["manger"], note:"Bastide royale bien équipée"},
+{stage:"Navarrenx", km:635, name:"Fontaine des remparts Navarrenx", tags:["eau"], note:"⭐ Belle fontaine ancienne, eau potable"},
+
+/* ===== AROUE ===== */
+{stage:"Aroue", km:649, name:"Ferme Bohoteguia ⭐", tags:["dodo","douche","manger","elec"], phone:"05 59 65 99 12", note:"⭐ Ferme basque, accueil chaleureux, cuisine maison, bivouac"},
+{stage:"Aroue", km:649, name:"Fontaine Aroue", tags:["eau"], note:"Eau potable"},
+
+/* ===== SAINT-PALAIS ===== */
+{stage:"Saint-Palais", km:655, name:"Camping Municipal Mosqueros", tags:["dodo","douche","elec"], phone:"05 59 65 73 11", note:"Municipal, bien situé, tentes OK"},
+{stage:"Saint-Palais", km:655, name:"Gîte d'étape de Saint-Palais", tags:["dodo","douche","linge","elec"], phone:"05 59 65 74 22", note:"Sous-préfecture basque, linge disponible"},
+{stage:"Saint-Palais", km:655, name:"Supermarché + boulangeries Saint-Palais", tags:["manger"], note:"Bon ravitaillement"},
+{stage:"Saint-Palais", km:655, name:"Restaurants Saint-Palais", tags:["manger"], note:"Cuisine basque, bonne offre"},
+{stage:"Saint-Palais", km:655, name:"Fontaine Saint-Palais", tags:["eau"], note:"Eau potable centre-ville"},
+
+/* ===== HARAMBELS ===== */
+{stage:"Harambels", km:662, name:"Gîte Harambels (stèle Gibraltar)", tags:["dodo","douche","elec"], phone:"05 59 37 82 07", note:"Point de convergence des 3 chemins (voie du Puy, de Tours, d'Arles)"},
+{stage:"Harambels", km:662, name:"Fontaine Harambels", tags:["eau"], note:"Eau potable"},
+
+/* ===== OSTABAT-ASME ===== */
+{stage:"Ostabat-Asme", km:669, name:"Gîte Izarrak ⭐", tags:["dodo","douche","elec","manger"], phone:"05 59 37 82 08", note:"⭐ CONVERGENCE des 3 voies jacquaires, gîte légendaire, repas communautaire"},
+{stage:"Ostabat-Asme", km:669, name:"Ferme Gaineko Etxea ⭐", tags:["dodo","douche","elec","manger"], phone:"05 59 37 82 59", note:"⭐ Ferme basque, bivouac, repas fermier, vaches pottok"},
+{stage:"Ostabat-Asme", km:669, name:"Fontaine Ostabat", tags:["eau"], note:"Eau potable au village"},
+
+/* ===== SAINT-JEAN-LE-VIEUX ===== */
+{stage:"Saint-Jean-le-Vieux", km:681, name:"Gîte Elichaldia ⭐", tags:["dodo","douche","elec","manger"], phone:"05 59 37 09 64", note:"⭐ Gîte de qualité, avant-dernière étape avant SJPP"},
+{stage:"Saint-Jean-le-Vieux", km:681, name:"Bar + Boulangerie Saint-Jean-le-Vieux", tags:["manger"], note:"Dernier ravitaillement avant SJPP"},
+{stage:"Saint-Jean-le-Vieux", km:681, name:"Fontaine", tags:["eau"], note:"Eau potable"},
+
+/* ===== SAINT-JEAN-PIED-DE-PORT ===== */
+{stage:"Saint-Jean-Pied-de-Port", km:750, name:"Camping Narbaïtz ⭐", tags:["dodo","douche","elec"], phone:"05 59 37 01 64", note:"⭐ Meilleur camping de SJPP, bord Nive, très bien équipé"},
+{stage:"Saint-Jean-Pied-de-Port", km:750, name:"Camping Euzkadi", tags:["dodo","douche","elec"], phone:"05 59 37 12 78", note:"Alternative au Narbaïtz, un peu plus loin"},
+{stage:"Saint-Jean-Pied-de-Port", km:750, name:"Gîte Accueil Saint-Jacques", tags:["dodo","douche","linge","elec"], phone:"05 59 37 05 09", note:"Associatif, prix pèlerin, ambiance communautaire"},
+{stage:"Saint-Jean-Pied-de-Port", km:750, name:"Bureau des Pèlerins / Accueil Compostelle", tags:["dodo","douche"], phone:"05 59 37 05 09", note:"Rue de la Citadelle — info, tampon, aide affectation gîtes"},
+{stage:"Saint-Jean-Pied-de-Port", km:750, name:"Laverie Automatique SJPP", tags:["laverie"], note:"Centre-ville, indispensable avant Camino espagnol"},
+{stage:"Saint-Jean-Pied-de-Port", km:750, name:"Restaurants + marché SJPP", tags:["manger"], note:"Pintxos, cuisine basque, marché vendredi"},
+{stage:"Saint-Jean-Pied-de-Port", km:750, name:"Boulangeries + épiceries SJPP", tags:["manger"], note:"Bien équipé, dernier ravitaillement France"},
+{stage:"Saint-Jean-Pied-de-Port", km:750, name:"Fontaines SJPP", tags:["eau"], note:"Eau potable, fontaine rue de la Citadelle"},
+
+];
+
+// Build grouped structure
+const stages = [];
+const stageMap = {};
+DATA.forEach(item => {
+  if (!stageMap[item.stage]) {
+    stageMap[item.stage] = { name: item.stage, km: item.km, items: [] };
+    stages.push(stageMap[item.stage]);
+  }
+  stageMap[item.stage].items.push(item);
+});
+
+// Aubrac stages needing warning
+const AUBRAC_STAGES = ["La Chaze-de-Peyre","Les Quatre Chemins","Prinsuéjols","Nasbinals","Aubrac"];
+
+let activeFilter = "all";
+let searchTerm = "";
+
+function renderList() {
+  const container = document.getElementById("list-container");
+  const empty = document.getElementById("empty");
+  const stats = document.getElementById("stats");
+
+  const q = searchTerm.toLowerCase().trim();
+  let totalVisible = 0;
+
+  let html = "";
+
+  stages.forEach(stage => {
+    const filteredItems = stage.items.filter(item => {
+      const matchFilter = activeFilter === "all" || item.tags.includes(activeFilter);
+      const matchSearch = !q ||
+        item.name.toLowerCase().includes(q) ||
+        stage.name.toLowerCase().includes(q) ||
+        (item.note && item.note.toLowerCase().includes(q)) ||
+        item.tags.some(t => t.includes(q));
+      return matchFilter && matchSearch;
+    });
+
+    if (filteredItems.length === 0) return;
+    totalVisible += filteredItems.length;
+
+    const aubracBadge = AUBRAC_STAGES.includes(stage.name) ? '<span class="alerte-badge">⚠️ EAU</span>' : "";
+
+    html += `<div class="stage-header">
+      <span class="stage-name">${stage.name}</span>
+      <span class="stage-km">km ${stage.km}</span>
+      ${aubracBadge}
+    </div>`;
+
+    if (AUBRAC_STAGES.includes(stage.name) && (activeFilter === "all" || activeFilter === "eau")) {
+      html += `<div class="aubrac-warn">⚠️ AUBRAC — Zone sans eau. Remplir toutes les gourdes.</div>`;
+    }
+
+    filteredItems.forEach(item => {
+      const tagsHtml = item.tags.map(t => {
+        const labels = {dodo:"🛏 Dodo",eau:"💧 Eau",manger:"🍽 Manger",douche:"🚿 Douche",linge:"👕 Linge",elec:"🔌 Élec",laverie:"🏪 Laverie"};
+        return `<span class="tag tag-${t}">${labels[t]||t}</span>`;
+      }).join("");
+
+      const phoneHtml = item.phone ? `<a class="item-phone" href="tel:${item.phone.replace(/\s/g,'')}">${item.phone}</a>` : "";
+
+      let noteHtml = "";
+      if (item.note) {
+        let n = item.note
+          .replace(/⭐/g, '<span class="star">⭐</span>')
+          .replace(/⚠️/g, '<span class="alerte-txt">⚠️</span>')
+          .replace(/(\d+€|€\/)/g, '<span class="prix">$1</span>');
+        noteHtml = `<div class="item-note">${n}</div>`;
+      }
+
+      html += `<div class="item" data-tags="${item.tags.join(",")}" data-stage="${stage.name}" data-name="${item.name}">
+        <div class="item-top">
+          <span class="item-name">${item.name}</span>
+        </div>
+        <div class="tags">${tagsHtml}</div>
+        ${noteHtml}
+        ${phoneHtml}
+      </div>`;
+    });
+  });
+
+  container.innerHTML = html;
+  empty.style.display = totalVisible === 0 ? "block" : "none";
+
+  const filterLabel = activeFilter === "all" ? "tous services" : activeFilter;
+  stats.textContent = `${totalVisible} résultat${totalVisible > 1 ? "s" : ""} · ${filterLabel}${q ? ` · "${q}"` : ""}`;
+}
+
+// Events
+document.querySelectorAll(".filter-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    activeFilter = btn.dataset.f;
+    renderList();
+    window.scrollTo(0, 0);
+  });
+});
+
+document.getElementById("search").addEventListener("input", e => {
+  searchTerm = e.target.value;
+  renderList();
+});
+
+// Init
+renderList();
+</script>
+</body>
+</html>
